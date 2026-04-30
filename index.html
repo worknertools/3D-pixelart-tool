@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Type play</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D 智能积木渲染器 - TECH-EVO</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg: #dfdede; 
+            --panel: #dfdede;
+            --text-main: #2a2a2a;
+            --text-sub: #666666;
+            --accent: #008cff;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Microsoft YaHei', sans-serif; 
+            background: var(--bg); color: var(--text-main); margin: 0; 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; width: 100vw; overflow: hidden;
+            -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            display: flex; width: 98vw; height: 96vh; gap: 15px; max-width: 1700px; 
+        }
+
+        .sidebar {
+            flex: 0 0 310px; 
+            background: var(--panel); border: none;
+            padding: 20px 20px 0 20px;
+            display: flex; flex-direction: column;
+            position: relative;
+            z-index: 10;
+        }
+
+        .tab-group { display: flex; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.1); background: #fff; }
+        .tab { flex: 1; padding: 10px 0; text-align: center; font-size: 10px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; color: var(--text-sub); }
+        .tab.active { background: #000; color: #fff; }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .text-input-container {
+            border: 1px solid rgba(0,0,0,0.1);
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        textarea { 
+            width: 100%; height: 80px; padding: 10px; box-sizing: border-box; 
+            border: none; outline: none; font-size: 12px; 
+            font-weight: bold; font-family: inherit; resize: none;
+            background: transparent; -webkit-appearance: none;
+        }
+
+        .align-group { 
+            display: flex; 
+            border-top: 1px solid rgba(0,0,0,0.05);
+            background: #fafafa;
+        }
+        .align-btn { 
+            flex: 1; height: 30px; 
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: 0.2s; color: #999;
+        }
+        .align-btn svg { width: 16px; height: 16px; fill: currentColor; }
+        .align-btn.active { background: #000; color: #fff; }
+        .align-btn:hover:not(.active) { background: #eee; color: #000; }
+
+        .file-box-wrapper { background: #ffffff; height: 36px; border: 1px solid rgba(0,0,0,0.1); position: relative; display: flex; align-items: center; padding: 0 10px; overflow: hidden; }
+        input[type=file] { width: 100%; height: 100%; cursor: pointer; opacity: 0; position: absolute; left: 0; top: 0; z-index: 2; }
+        .file-placeholder { font-size: 10px; color: var(--text-sub); }
+
+        .file-status {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%; 
+            background: #fff; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 10px; box-sizing: border-box; z-index: 3;
+        }
+        .file-status.hidden { display: none; }
+        .file-status .name { font-size: 10px; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+        .file-status .close-x { cursor: pointer; font-size: 14px; color: #888; padding: 5px; }
+
+        .controls-group { display: flex; flex-direction: column; gap: 10px; margin-top: 45px; }
+        .item { display: flex; flex-direction: column; gap: 15px; margin-bottom: 12px; }
+        label { font-size: 9px; color: var(--text-sub); text-transform: uppercase; display: flex; justify-content: space-between; }
+        label span { color: #000; font-weight: bold; }
+
+        input[type=range] { -webkit-appearance: none; appearance: none; background: #fff; height: 2px; outline: none; width: 100%; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 10px; background: #000; cursor: pointer; border-radius: 0; }
+        input[type=range]::-moz-range-thumb { width: 10px; height: 10px; background: #000; cursor: pointer; border-radius: 0; border: none; }
+
+        .color-input-group { 
+            width: 100%; height: 30px; border: 1px solid rgba(0,0,0,0.1); 
+            background: #fff; display: flex; align-items: center; overflow: hidden;
+        }
+        input[type=color] { 
+            border: none; width: 40px; height: 100%; background: none; 
+            cursor: pointer; padding: 0; border-right: 1px solid rgba(0,0,0,0.05); -webkit-appearance: none;
+        }
+        input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type=color]::-webkit-color-swatch { border: none; }
+
+        .hex-text-input { 
+            border: none; outline: none; font-family: 'Consolas', 'Monaco', monospace; 
+            font-size: 12px; font-weight: 400; letter-spacing: 0.5px;
+            flex: 1; height: 100%; background: transparent;
+            text-align: center; padding-right: 10px; color: #000;
+        }
+
+        .main-content { flex: 1; background: #000; position: relative; overflow: hidden; border-radius: 4px; }
+
+        .bottom-actions { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-bottom: 10px; }
+        .btn-row { display: flex; gap: 4px; }
+        .btn-row button { flex: 1; padding: 8px 0; font-size: 9px; }
+
+        button { padding: 12px; border: 1px solid #000; background: #1a1a1a; color: #fff; cursor: pointer; transition: 0.3s; letter-spacing: 1px; text-transform: uppercase; font-size: 10px; -webkit-appearance: none; }
+        button:hover { background: #333; }
+        .btn-secondary { background: #ccc !important; color: #000 !important; border: none !important; }
+
+        .copyright { font-size: 9px; color: var(--text-sub); text-align: center; opacity: 0.7; margin-top: 5px; }
+
+        .visual-mode-container { display: flex; gap: 4px; }
+        .mode-toggle { flex: 1; display: flex; align-items: center; gap: 5px; background: #fff; padding: 8px 6px; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; }
+        .mode-toggle input { cursor: pointer; margin: 0; width: auto; }
+        .mode-toggle span { font-size: 8px; font-weight: bold; color: #000; text-transform: uppercase; white-space: nowrap; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="sidebar">
+        <label style="margin-bottom: 10px;">Input Source / 输入源</label>
+        <div class="tab-group">
+            <div class="tab active" onclick="switchTab('text', this)">Text</div>
+            <div class="tab" onclick="switchTab('image', this)">Image</div>
+        </div>
+
+        <div id="panel-text" class="panel active">
+            <div class="text-input-container">
+                <textarea id="textInput" maxlength="100" spellcheck="false">HELLO</textarea>
+                <div class="align-group">
+                    <div class="align-btn active" onclick="switchAlign('left', this)" title="左对齐">
+                        <svg viewBox="0 0 24 24"><path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/></svg>
+                    </div>
+                    <div class="align-btn" onclick="switchAlign('center', this)" title="居中对齐">
+                        <svg viewBox="0 0 24 24"><path d="M7 15h10v-2H7v2zm-4 4h18v-2H3v2zm4-8h10V9H7v2zm-4-6v2h18V5H3z"/></svg>
+                    </div>
+                    <div class="align-btn" onclick="switchAlign('right', this)" title="右对齐">
+                        <svg viewBox="0 0 24 24"><path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z" style="transform-origin:center; transform:scaleX(-1);"/></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="panel-image" class="panel">
+            <div class="file-box-wrapper">
+                <input type="file" id="imageUpload" accept="image/*">
+                <div class="file-placeholder">Upload Image / 点击上传</div>
+                <div id="file-info" class="file-status hidden">
+                    <span class="name" id="display-name"></span>
+                    <span class="close-x" onclick="clearImage(event)">✕</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-group">
+            <div class="item">
+                <label>Background / 画布背景</label>
+                <div class="color-input-group">
+                    <input type="color" id="cpBackground" value="#000000">
+                    <input type="text" id="valBgColor" class="hex-text-input" value="#000000" spellcheck="false">
+                </div>
+            </div>
+            <div class="item">
+                <label>Visual Mode / 视觉模式</label>
+                <div class="visual-mode-container">
+                    <label class="mode-toggle">
+                        <input type="checkbox" id="chkWhiteMode">
+                        <span>White / 白模</span>
+                    </label>
+                    <label class="mode-toggle">
+                        <input type="checkbox" id="chkNoEdges">
+                        <span>No Edge / 无黑边</span>
+                    </label>
+                </div>
+            </div>
+            <div class="item"><label>Density / 像素密度 <span id="valDensity">35</span></label><input type="range" id="slDensity" min="10" max="70" value="35"></div>
+            <div class="item"><label>Matting / 抠图灵敏度 <span id="valThreshold">40</span></label><input type="range" id="slThreshold" min="5" max="150" value="40"></div>
+            <div class="item"><label>Depth / 积木深度 <span id="valHeight">10.0</span></label><input type="range" id="slHeight" min="1" max="50" step="0.5" value="10"></div>
+            <div class="item"><label>Random / 错落感 <span id="valRand">100%</span></label><input type="range" id="slRand" min="0" max="1" step="0.05" value="1"></div>
+            <div class="item"><label>Gap / 缝隙 <span id="valGap">0.00</span></label><input type="range" id="slGap" min="0" max="0.4" step="0.01" value="0"></div>
+        </div>
+
+        <div class="bottom-actions">
+            <label style="margin-bottom: 4px;">Export / 导出渲染</label>
+            <div class="btn-row">
+                <button onclick="downloadImage('jpg')">JPG</button>
+                <button onclick="downloadImage('png')">PNG</button>
+                <button onclick="downloadSVG()">SVG</button>
+            </div>
+            <div class="btn-row">
+                <button onclick="randomAngle()" class="btn-secondary">随机角度效果</button>
+                <button onclick="resetCamera()" class="btn-secondary">回到正面视角</button>
+            </div>
+            <div class="copyright">© 2026 Design by Type Play</div>
+        </div>
+    </div>
+    <div class="main-content" id="canvas-container"></div>
+</div>
+
+<script>
+    const PALETTES = [
+        { top: 0xFCA0D1, sideDark: 0xD75A92, sideMid: 0xED7BAF },
+        { top: 0x659DF6, sideDark: 0x3465CC, sideMid: 0x4B83E1 },
+        { top: 0xFF9A4A, sideDark: 0xD65C0D, sideMid: 0xF07B24 },
+        { top: 0xF2EA24, sideDark: 0xAFA600, sideMid: 0xD7CE0A },
+        { top: 0x5FC178, sideDark: 0x2C8542, sideMid: 0x44A65C },
+        { top: 0xB286F4, sideDark: 0x7B43CC, sideMid: 0x9764E4 } 
+    ];
+
+    let currentMode = 'text', currentImageObj = null, activeVoxels = [], lastCanvasSize = {w:0, h:0}, textAlign = 'left';
+    let isWhiteMode = false, isNoEdges = false, currentBaseScale = 1;
+
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+    
+    let aspect = container.clientWidth / container.clientHeight;
+    const d = 80; 
+    const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+    
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = 0.05; 
+
+    const mainGroup = new THREE.Group();
+    scene.add(mainGroup);
+
+    const sharedBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+    const sharedEdgesGeo = new THREE.EdgesGeometry(sharedBoxGeo);
+    const sharedEdgeMat = new THREE.LineBasicMaterial({ color: 0x000000 });
+
+    const sharedMaterials = PALETTES.map(c => [
+        new THREE.MeshBasicMaterial({ color: c.sideDark }), 
+        new THREE.MeshBasicMaterial({ color: c.sideDark }), 
+        new THREE.MeshBasicMaterial({ color: c.top }),      
+        new THREE.MeshBasicMaterial({ color: c.sideDark }), 
+        new THREE.MeshBasicMaterial({ color: c.sideMid }),  
+        new THREE.MeshBasicMaterial({ color: c.sideMid })   
+    ]);
+
+    const whiteMaterials = Array(6).fill(0).map((_, i) => new THREE.MeshBasicMaterial({ color: [0xcccccc, 0xcccccc, 0xffffff, 0xcccccc, 0xeeeeee, 0xeeeeee][i] }));
+
+    function resetCamera() {
+        camera.position.set(0, 0, 100); 
+        controls.target.set(0, 0, 0);
+        camera.zoom = 1.0; 
+        camera.updateProjectionMatrix();
+        controls.update();
+    }
+
+    function randomAngle() {
+        const r = 100;
+        const theta = (Math.random() - 0.5) * Math.PI * 0.7; 
+        const phi = (Math.random() - 0.5) * Math.PI * 0.4;
+        camera.position.set(r * Math.sin(theta) * Math.cos(phi), r * Math.sin(phi), r * Math.cos(theta) * Math.cos(phi));
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+    }
+
+    function updateTransforms() {
+        const maxH = parseFloat(document.getElementById('slHeight').value);
+        const rand = parseFloat(document.getElementById('slRand').value);
+        const gap = parseFloat(document.getElementById('slGap').value);
+        document.getElementById('valHeight').innerText = maxH.toFixed(1);
+        document.getElementById('valRand').innerText = Math.round(rand * 100) + '%';
+        document.getElementById('valGap').innerText = gap.toFixed(2);
+
+        const blockScale = (1 - gap) * currentBaseScale;
+        activeVoxels.forEach(voxel => {
+            const h = maxH - (voxel.userData.seed * (maxH - 1) * rand);
+            voxel.scale.set(blockScale, blockScale, h);
+            voxel.position.set(voxel.userData.baseX * currentBaseScale, voxel.userData.baseY * currentBaseScale, h / 2);
+            if (voxel.children[0]) voxel.children[0].visible = (!isWhiteMode && !isNoEdges);
+        });
+    }
+
+    function renderGraphic() {
+        const density = parseInt(document.getElementById('slDensity').value);
+        const threshold = parseInt(document.getElementById('slThreshold').value);
+        document.getElementById('valDensity').innerText = density;
+        document.getElementById('valThreshold').innerText = threshold;
+
+        currentBaseScale = 35 / density;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        if (currentMode === 'text') {
+            const text = document.getElementById('textInput').value || ' ';
+            const lines = text.split('\n');
+            const fontSize = density;
+            ctx.font = `900 ${fontSize}px sans-serif`;
+            let maxWidth = 0;
+            let lineInfos = [];
+            lines.forEach(line => {
+                const w = ctx.measureText(line).width;
+                if (w > maxWidth) maxWidth = w;
+                lineInfos.push({ text: line, width: w });
+            });
+            const lineHeight = fontSize * 1.1;
+            canvas.width = Math.max(1, maxWidth + 20); 
+            canvas.height = Math.max(1, lines.length * lineHeight + fontSize * 0.5);
+            ctx.font = `900 ${fontSize}px sans-serif`;
+            ctx.fillStyle = '#fff';
+            ctx.textBaseline = 'top';
+            lineInfos.forEach((info, i) => {
+                let xPos = 10; 
+                if(textAlign === 'center') xPos = (canvas.width - info.width) / 2;
+                if(textAlign === 'right') xPos = canvas.width - info.width - 10;
+                ctx.fillText(info.text, xPos, i * lineHeight + fontSize * 0.2);
+            });
+        } else if (currentMode === 'image' && currentImageObj) {
+            const s = Math.min((density * 2.2) / currentImageObj.width, (density * 2.2) / currentImageObj.height);
+            canvas.width = Math.max(1, currentImageObj.width * s); 
+            canvas.height = Math.max(1, currentImageObj.height * s);
+            ctx.drawImage(currentImageObj, 0, 0, canvas.width, canvas.height);
+        }
+
+        if(canvas.width <= 0 || canvas.height <= 0) return;
+
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data; const bgR = data[0], bgG = data[1], bgB = data[2];
+        lastCanvasSize = {w: canvas.width, h: canvas.height};
+
+        while(mainGroup.children.length > 0) mainGroup.remove(mainGroup.children[0]);
+        activeVoxels = [];
+
+        for (let y = 0; y < canvas.height; y++) {
+            for (let x = 0; x < canvas.width; x++) {
+                const i = (y * canvas.width + x) * 4;
+                let isSubject = (currentMode === 'text') ? data[i+3] > 50 : (data[i+3] > 128 && Math.sqrt(Math.pow(data[i]-bgR,2) + Math.pow(data[i+1]-bgG,2) + Math.pow(data[i+2]-bgB,2)) > threshold);
+                if (isSubject) {
+                    const colorIndex = Math.floor(Math.random() * sharedMaterials.length);
+                    const mat = isWhiteMode ? whiteMaterials : sharedMaterials[colorIndex];
+                    const voxel = new THREE.Mesh(sharedBoxGeo, mat);
+                    voxel.userData = { baseX: x - canvas.width/2, baseY: canvas.height/2 - y, seed: Math.random(), paletteIdx: colorIndex };
+                    const edges = new THREE.LineSegments(sharedEdgesGeo, sharedEdgeMat);
+                    edges.visible = (!isWhiteMode && !isNoEdges);
+                    voxel.add(edges);
+                    mainGroup.add(voxel);
+                    activeVoxels.push(voxel);
+                }
+            }
+        }
+        updateTransforms();
+    }
+
+    function downloadImage(fmt) {
+        const currentW = container.clientWidth, currentH = container.clientHeight;
+        const screenAspect = currentW / currentH;
+        let exportW, exportH;
+        if (screenAspect >= 1) { exportW = 4096; exportH = 4096 / screenAspect; } 
+        else { exportH = 4096; exportW = 4096 * screenAspect; }
+
+        const originalBg = scene.background;
+        if (fmt === 'png') scene.background = null;
+        
+        renderer.setSize(exportW, exportH, false);
+        camera.updateProjectionMatrix();
+        renderer.render(scene, camera);
+
+        const link = document.createElement('a');
+        link.download = `voxel_art.${fmt}`;
+        link.href = renderer.domElement.toDataURL(fmt === 'png' ? 'image/png' : 'image/jpeg', 0.9);
+        link.click();
+
+        scene.background = originalBg;
+        renderer.setSize(currentW, currentH);
+        camera.updateProjectionMatrix();
+    }
+
+    function downloadSVG() {
+        if (activeVoxels.length === 0) return;
+        const gap = parseFloat(document.getElementById('slGap').value);
+        const currentBg = document.getElementById('valBgColor').value;
+        const size = 10; 
+        const svgW = lastCanvasSize.w * currentBaseScale * size; 
+        const svgH = lastCanvasSize.h * currentBaseScale * size;
+        let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" style="background:${currentBg}">`;
+        activeVoxels.forEach(v => {
+            const x = (v.position.x + (lastCanvasSize.w * currentBaseScale) / 2 - (1 - gap) * currentBaseScale / 2) * size;
+            const y = ((lastCanvasSize.h * currentBaseScale) / 2 - v.position.y - (1 - gap) * currentBaseScale / 2) * size;
+            const s = (1 - gap) * currentBaseScale * size;
+            const colorHex = isWhiteMode ? '#ffffff' : '#' + PALETTES[v.userData.paletteIdx].top.toString(16).padStart(6, '0');
+            const stroke = (isWhiteMode || isNoEdges) ? 'none' : 'black';
+            svgContent += `<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="${colorHex}" stroke="${stroke}" stroke-width="0.5"/>`;
+        });
+        svgContent += `</svg>`;
+        const blob = new Blob([svgContent], {type: 'image/svg+xml'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url; link.download = "voxel_art.svg"; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
+
+    function switchAlign(val, el) { textAlign = val; document.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active')); el.classList.add('active'); renderGraphic(); }
+    function clearImage(e) { e.stopPropagation(); currentImageObj = null; document.getElementById('imageUpload').value = ""; document.getElementById('file-info').classList.add('hidden'); renderGraphic(); }
+    function switchTab(m, el) { currentMode = m; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.panel').forEach(p => p.classList.remove('active')); el.classList.add('active'); document.getElementById('panel-'+m).classList.add('active'); renderGraphic(); }
+
+    document.getElementById('textInput').addEventListener('input', renderGraphic);
+    document.getElementById('imageUpload').onchange = (e) => {
+        const file = e.target.files[0]; if(!file) return;
+        document.getElementById('display-name').innerText = file.name;
+        document.getElementById('file-info').classList.remove('hidden');
+        const reader = new FileReader();
+        reader.onload = (ev) => { 
+            const img = new Image(); 
+            img.onload = () => { currentImageObj = img; renderGraphic(); }; 
+            img.src = ev.target.result; 
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const cpBg = document.getElementById('cpBackground');
+    const txtBg = document.getElementById('valBgColor');
+    cpBg.oninput = (e) => { const color = e.target.value.toUpperCase(); txtBg.value = color; scene.background.set(color); };
+    txtBg.oninput = (e) => { const color = e.target.value; if(/^#[0-9A-F]{6}$/i.test(color)) { cpBg.value = color; scene.background.set(color); } };
+    
+    document.getElementById('chkWhiteMode').onchange = (e) => { isWhiteMode = e.target.checked; renderGraphic(); };
+    document.getElementById('chkNoEdges').onchange = (e) => { isNoEdges = e.target.checked; updateTransforms(); };
+
+    ['slDensity','slThreshold','slHeight','slRand','slGap'].forEach(id => { 
+        document.getElementById(id).addEventListener('input', (e) => {
+            if(id === 'slDensity' || id === 'slThreshold') renderGraphic();
+            else updateTransforms();
+        });
+    });
+
+    window.addEventListener('resize', () => { 
+        const w = container.clientWidth, h = container.clientHeight; 
+        aspect = w / h;
+        camera.left = -d * aspect; camera.right = d * aspect; 
+        camera.updateProjectionMatrix(); 
+        renderer.setSize(w, h); 
+    });
+
+    function animate() { 
+        requestAnimationFrame(animate); 
+        controls.update(); 
+        renderer.render(scene, camera); 
+    }
+    
+    resetCamera(); 
+    renderGraphic(); 
+    animate();
+</script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
